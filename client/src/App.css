@@ -1,0 +1,32 @@
+html {
+    max-width: 1440px;
+    margin: 0 auto;
+}
+
+.App {
+    margin: 1rem;
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: space-evenly;
+}
+
+.user-table th, .user-table td {
+    border: 1px solid black;
+    padding: 5px;
+}
+
+.user-table, th, td {
+    border-collapse: collapse;
+}
+
+input {
+    width: 100%;
+}
+
+select {
+    width: 100%;
+}
+
+.input-radio {
+    width: auto;
+}
