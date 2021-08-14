@@ -1,24 +1,45 @@
-import React, { Component } from 'react';
+import { useState } from 'react';
 
-export default class UserEdit extends Component {
-    constructor(props) {
-        super(props);
+
+const UserEdit = (props) => {
+    const initialFormData = {
+        name: props.name,
+        faculty: props.faculty,
+        email: props.email,
+        type: props.type,
+        count: props.count,
+        buddy: props.buddy
+    };
+
+    const [formData, updateFormData] = useState(initialFormData);
+
+    const handleChange = (e) => {
+        updateFormData({
+            ...formData,
+            [e.target.name]: e.target.value.trim()
+        });
     }
 
-    render() {
-        return (
-            <form>
-                <fieldset>
-                    <legend>Edit User</legend>
-                    <table>
+    const handleSubmit = (e) => {
+        e.preventDefault();
+
+        props.onSubmit(formData);
+    }
+
+    return (
+        <form>
+            <fieldset>
+                <legend>Edit/Add User</legend>
+                <table>
+                    <tbody>
                         <tr>
                             <td align="left">Name</td>
-                            <td align="right"><input type="text" name="name" /></td>
-                        </tr>
+                            <td align="right"><input type="text" name="name" onChange={handleChange} defaultValue={props.name} /></td>
+                            </tr>
                         <tr>
                             <td align="left">Fachbereich</td>
                             <td align="right">
-                            <select id="faculty" name="faculty">
+                            <select id="faculty" name="faculty" onChange={handleChange} defaultValue={props.faculty}>
                                 <option value="FB01">FB01 (Rechtswissenschaften)</option>
                                 <option value="FB02">FB02 (Wirtschaftswissenschaften)</option>
                                 <option value="FB03">FB03 (Gesellschaftswissenschaften und Philosophie)</option>
@@ -39,22 +60,27 @@ export default class UserEdit extends Component {
                         </tr>
                         <tr>
                             <td align="left">Email</td>
-                            <td align="right"><input type="email" name="email" /></td>
+                            <td align="right"><input type="email" name="email" disabled defaultValue={props.email} /></td>
                         </tr>
                         <tr>
                             <td align="left">Typ</td>
-                            <td><input class="input-radio" type="radio" name="type" />Kleiner Buddy
-                            <input class="input-radio" type="radio" name="type" />Grosser Buddy</td>
+                            <td><input className="input-radio" type="radio" value="small" name="type" onChange={handleChange} checked={formData.type == "small"} />Kleiner Buddy
+                        <input className="input-radio" type="radio" value="big" name="type" onChange={handleChange} checked={formData.type == "big"} />Grosser Buddy</td>
+                        </tr>
+                        <tr>
+                            <td align="left">Anzahl</td>
+                            <td><input type="number" min="1" max="69" name="count" onChange={handleChange} defaultValue={props.count} /></td>
                         </tr>
                         <tr>
                             <td align="left">Zug. Buddy</td>
-                            <td align="right"><input type="text" disabled="true"
-                                placeholder="editing not yet implemented" name="buddy" /></td>
+                            <td align="right"><input type="text" name="buddy" defaultValue={props.buddy} /></td>
                         </tr>
-                    </table>
-                </fieldset>
-            </form>
-        );
-    }
+                    </tbody>
+                </table>
+                <button onClick={handleSubmit}>Submit</button>
+            </fieldset>
+        </form>
+    );
 }
 
+export default UserEdit;

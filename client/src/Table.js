@@ -26,15 +26,19 @@ export default class Table extends Component {
     render() {
         return (
             <table className="user-table">
-                <tr>
-                    <th>Name</th>
-                    <th>Faculty</th>
-                </tr>
-                {this.state.data.map(elem =>
+                <thead>
                     <tr>
-                        <td>{elem.name}</td>
-                        <td>{elem.faculty}</td>
-                    </tr>)}
+                        <th>Name</th>
+                        <th>Faculty</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {this.state.data.map(elem =>
+                        <tr>
+                            <td>{elem.name}</td>
+                            <td>{elem.faculty}</td>
+                        </tr>)}
+                </tbody>
             </table>
         );
     }
