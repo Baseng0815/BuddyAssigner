@@ -3,21 +3,29 @@ import { useState } from 'react';
 
 const UserEdit = (props) => {
     const initialFormData = {
-        name: props.name,
-        faculty: props.faculty,
-        email: props.email,
-        type: props.type,
-        count: props.count,
-        buddy: props.buddy
+        name: props.name || '',
+        faculty: props.faculty || '',
+        email: props.email || '',
+        type: props.type || 'small',
+        count: props.count || 1,
+        buddy: props.buddy || ''
     };
 
     const [formData, updateFormData] = useState(initialFormData);
 
     const handleChange = (e) => {
-        updateFormData({
-            ...formData,
-            [e.target.name]: e.target.value.trim()
-        });
+        if (e.target.name == 'type' && e.target.value == 'small') {
+            updateFormData({
+                ...formData,
+                count: 1,
+                [e.target.name]: e.target.value.trim()
+            });
+        } else {
+            updateFormData({
+                ...formData,
+                [e.target.name]: e.target.value.trim()
+            });
+        }
     }
 
     const handleSubmit = (e) => {
@@ -29,7 +37,7 @@ const UserEdit = (props) => {
     return (
         <form>
             <fieldset>
-                <legend>Edit/Add User</legend>
+                <legend>{props.title}</legend>
                 <table>
                     <tbody>
                         <tr>
@@ -60,7 +68,7 @@ const UserEdit = (props) => {
                         </tr>
                         <tr>
                             <td align="left">Email</td>
-                            <td align="right"><input type="email" name="email" disabled defaultValue={props.email} /></td>
+                            <td align="right"><input type="email" name="email" onChange={handleChange} defaultValue={props.email} /></td>
                         </tr>
                         <tr>
                             <td align="left">Typ</td>
@@ -69,11 +77,11 @@ const UserEdit = (props) => {
                         </tr>
                         <tr>
                             <td align="left">Anzahl</td>
-                            <td><input type="number" min="1" max="69" name="count" onChange={handleChange} defaultValue={props.count} /></td>
+                            <td><input type="number" min="1" max="69" name="count" disabled={formData.type == 'small'} onChange={handleChange} value={formData.count} /></td>
                         </tr>
                         <tr>
                             <td align="left">Zug. Buddy</td>
-                            <td align="right"><input type="text" name="buddy" defaultValue={props.buddy} /></td>
+                            <td align="right"><input type="text" name="buddy" disabled defaultValue={props.buddy} /></td>
                         </tr>
                     </tbody>
                 </table>

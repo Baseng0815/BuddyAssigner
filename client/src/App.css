@@ -3,7 +3,7 @@ html {
     margin: 0 auto;
 }
 
-.App {
+.admin-page {
     margin: 1rem;
     display: flex;
     flex-flow: row wrap;
@@ -31,10 +31,6 @@ select {
     width: auto;
 }
 
-textarea {
-    width: 100%;
-    padding: 0;
-    margin: 0;
-    height: 100%;
-    display: block;
+form {
+    margin-bottom: 10px;
 }

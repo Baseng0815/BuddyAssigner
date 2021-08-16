@@ -3,24 +3,6 @@ import React, { Component } from 'react';
 export default class Table extends Component {
     constructor(props) {
         super(props);
-
-        this.state = { data: [
-            { name: 'Shedexx', faculty: 'FB12' },
-            { name: 'Shedexx', faculty: 'FB12' },
-            { name: 'Shedexx', faculty: 'FB12' },
-            { name: 'Shedexx', faculty: 'FB12' },
-            { name: 'Shedexx', faculty: 'FB12' },
-            { name: 'Shedexx', faculty: 'FB12' },
-            { name: 'Shedexx', faculty: 'FB12' },
-            { name: 'Shedexx', faculty: 'FB12' },
-            { name: 'Shedexx', faculty: 'FB12' },
-            { name: 'Shedexx', faculty: 'FB12' },
-            { name: 'Shedexx', faculty: 'FB12' },
-            { name: 'Shedexx', faculty: 'FB12' },
-            { name: 'Shedexx', faculty: 'FB12' },
-            { name: 'Shedexx', faculty: 'FB12' },
-            { name: 'Shedexx', faculty: 'FB12' },
-        ] };
     }
 
     render() {
@@ -29,14 +11,22 @@ export default class Table extends Component {
                 <thead>
                     <tr>
                         <th>Name</th>
-                        <th>Faculty</th>
+                        <th>Fachbereich</th>
+                        <th>Email</th>
+                        <th>Typ</th>
+                        <th>Anzahl</th>
+                        <th>Zug. Buddy</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {this.state.data.map(elem =>
+                    {this.props.users.map(user =>
                         <tr>
-                            <td>{elem.name}</td>
-                            <td>{elem.faculty}</td>
+                            <td>{user.name}</td>
+                            <td>{user.faculty}</td>
+                            <td>{user.email}</td>
+                            <td>{user.type}</td>
+                            <td>{user.count}</td>
+                            <td>{user.buddy}</td>
                         </tr>)}
                 </tbody>
             </table>
