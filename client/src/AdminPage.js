@@ -9,7 +9,7 @@ const AdminPage = (props) => {
 
     const fetchUsers = () => {
         const auth = 'Basic ' + btoa(passwordData.password);
-        fetch('http://bengel.xyz:8081/get/users', {
+        fetch('https://bengel.xyz:8081/get/users', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -45,7 +45,7 @@ const AdminPage = (props) => {
 
     const handleUserEdit = (user) => {
         const auth = 'Basic ' + btoa(passwordData.password);
-        fetch('http://bengel.xyz:8081/post/user', {
+        fetch('https://bengel.xyz:8081/post/user', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

@@ -16,7 +16,7 @@ const LandingPage = (props) => {
         }
 
         const auth = 'Basic ' + btoa(passphrase);
-        fetch('http://bengel.xyz:8081/post/user', {
+        fetch('https://bengel.xyz:8081/post/user', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
