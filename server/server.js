@@ -3,8 +3,11 @@ const cors          = require('cors');
 const MongoClient   = require('mongodb').MongoClient;
 const cookieParser  = require('cookie-parser');
 const bodyParser    = require('body-parser');
+const fs 	    = require('fs');
+const https	    = require('https');
 
-const mongoUrl = 'mongodb://localhost:27017';
+const mongoUrl 	= 'mongodb://localhost:27017';
+const port 	= 8081;
 /* TODO put this in .env file with a sane password before deploying
  * oh man, I hope I won't forget this...
  */
@@ -129,11 +132,13 @@ MongoClient.connect(mongoUrl, (err, client) => {
     db = client.db('buddyAssigner');
     console.log('Connected to database at ', mongoUrl);
 
-    const server = app.listen(8081, () => {
-        const host = server.address().address;
-        const port = server.address().port;
+    const options = {
+	cert: fs.readFileSync('/etc/letsencrypt/live/bengel.xyz/fullchain.pem'),
+	key: fs.readFileSync('/etc/letsencrypt/live/bengel.xyz/privkey.pem'),
+    }
 
-        console.log('App is listening at http://%s:%s', host, port);
+    https.createServer(options, app).listen(port, () => {
+	console.log('Server starting in port ' + port);
     });
 });
 
