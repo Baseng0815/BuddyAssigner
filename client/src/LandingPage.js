@@ -9,8 +9,10 @@ const LandingPage = (props) => {
 
     const handleUserAdd = (user) => {
         let passphrase = '';
-        while (!passphrase) {
-            passphrase = prompt('Zur Sicherheit: wie heisst unser Referent mit Nachnamen?');
+        passphrase = prompt('Zur Sicherheit: wie heisst unser Referent mit Nachnamen?');
+        if (!passphrase) {
+            alert('Passwortfeld leer, bitte erneut versuchen.');
+            return;
         }
 
         const auth = 'Basic ' + btoa(passphrase);
