@@ -8,6 +8,17 @@ const AdminPage = (props) => {
     const [userData, updateUserData]            = useState({ users: [] });
     const [miscData, updateMiscData]            = useState({ editing: {}});
 
+    /* in case we are updating the table while editing */
+    React.useEffect(() => {
+        for (let user of userData.users) {
+            if (user.email == miscData.editing.email) {
+                updateMiscData({
+                    editing: user
+                });
+            }
+        }
+    }, [userData.users]);
+
     const fetchUsers = () => {
         const auth = 'Basic ' + btoa(passwordData.password);
         fetch('http://localhost:8081/get/users', {
@@ -82,19 +93,47 @@ const AdminPage = (props) => {
         }
     }
 
+    const handleTableDeleteClick = (mail) => {
+        for (let user of userData.users) {
+            if (user.email == mail) {
+                if (window.confirm('Delete user ' + user.name + '?')) {
+                    const auth = 'Basic ' + btoa(passwordData.password);
+                    fetch('http://localhost:8081/delete/user/' + encodeURIComponent(mail), {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': auth
+                        },
+                    }).then(async (response) => {
+                        if (response.ok) {
+                            alert('Aktion erfolgreich.')
+                            fetchUsers();
+                        } else {
+                            const error = await response.text();
+                            alert(error);
+                        }
+                    }).catch(err => {
+                        alert(err);
+                    });
+                }
+            }
+        }
+    }
+
     return (
         <div className="admin-page">
-            <Table users={userData.users} editClick={handleTableEditClick}/>
+            <Table users={userData.users} editClick={handleTableEditClick}
+                deleteClick={handleTableDeleteClick} />
             <div>
-                <UserEdit title="Edit/Add User" onSubmit={handleUserEdit} {...miscData.editing} />
-                <form>
-                    <fieldset>
-                        <legend>Password</legend>
-                        <label for="password">Passwort</label>
-                        <input type="password" name="password" onChange={handleChangePassword} />
-                        <button onClick={onTableUpdatePress}>Tabelle updaten</button>
-                    </fieldset>
-                </form>
+            <UserEdit title="Edit/Add User" onSubmit={handleUserEdit} {...miscData.editing} />
+            <form>
+                <fieldset>
+                    <legend>Password</legend>
+                    <label for="password">Passwort</label>
+                    <input type="password" name="password" onChange={handleChangePassword} />
+                    <button onClick={onTableUpdatePress}>Tabelle updaten</button>
+                </fieldset>
+            </form>
             </div>
         </div>
     );

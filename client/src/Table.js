@@ -6,6 +6,7 @@ const Table = (props) => {
             <thead>
                 <tr>
                     <th></th>
+                    <th></th>
                     <th>Name</th>
                     <th>Fachbereich</th>
                     <th>Email</th>
@@ -17,6 +18,7 @@ const Table = (props) => {
             <tbody>
                 {props.users.map(user =>
                     <tr>
+                        <td><button onClick={() => props.deleteClick(user.email)}>Delete</button></td>
                         <td><button onClick={() => props.editClick(user.email)}>Edit</button></td>
                         <td>{user.name}</td>
                         <td>{user.faculty}</td>
