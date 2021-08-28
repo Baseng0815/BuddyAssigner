@@ -6,10 +6,11 @@ import UserEdit from './UserEdit';
 const AdminPage = (props) => {
     const [passwordData, updatePasswordData]    = useState({ password: '' });
     const [userData, updateUserData]            = useState({ users: [] });
+    const [miscData, updateMiscData]            = useState({ editing: {}});
 
     const fetchUsers = () => {
         const auth = 'Basic ' + btoa(passwordData.password);
-        fetch('https://bengel.xyz:8081/get/users', {
+        fetch('http://localhost:8081/get/users', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -45,7 +46,7 @@ const AdminPage = (props) => {
 
     const handleUserEdit = (user) => {
         const auth = 'Basic ' + btoa(passwordData.password);
-        fetch('https://bengel.xyz:8081/post/user', {
+        fetch('http://localhost:8081/post/user', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -71,11 +72,21 @@ const AdminPage = (props) => {
         });
     }
 
+    const handleTableEditClick = (mail) => {
+        for (let user of userData.users) {
+            if (user.email == mail) {
+                updateMiscData({
+                    editing: user
+                });
+            }
+        }
+    }
+
     return (
         <div className="admin-page">
-            <Table users={userData.users} />
+            <Table users={userData.users} editClick={handleTableEditClick}/>
             <div>
-                <UserEdit title="Edit/Add User" onSubmit={handleUserEdit}/>
+                <UserEdit title="Edit/Add User" onSubmit={handleUserEdit} {...miscData.editing} />
                 <form>
                     <fieldset>
                         <legend>Password</legend>

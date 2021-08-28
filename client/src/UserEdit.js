@@ -1,17 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 
 const UserEdit = (props) => {
     const initialFormData = {
         name: props.name || '',
-        faculty: props.faculty || '',
+        faculty: props.faculty || 'FB01',
         email: props.email || '',
         type: props.type || 'small',
         count: props.count || 1,
         buddy: props.buddy || ''
     };
 
-    const [formData, updateFormData] = useState(initialFormData);
+    const [formData, updateFormData] = useState({});
+    useEffect(() => {
+        updateFormData(initialFormData);
+    }, [props]);
 
     const handleChange = (e) => {
         if (e.target.name == 'type' && e.target.value == 'small') {
@@ -42,12 +45,12 @@ const UserEdit = (props) => {
                     <tbody>
                         <tr>
                             <td align="left">Name</td>
-                            <td align="right"><input type="text" name="name" onChange={handleChange} defaultValue={props.name} /></td>
+                            <td align="right"><input type="text" name="name" onChange={handleChange} value={formData.name} /></td>
                             </tr>
                         <tr>
                             <td align="left">Fachbereich</td>
                             <td align="right">
-                            <select id="faculty" name="faculty" onChange={handleChange} defaultValue={props.faculty}>
+                            <select id="faculty" name="faculty" value={formData.faculty} onChange={handleChange}>
                                 <option value="FB01">FB01 (Rechtswissenschaften)</option>
                                 <option value="FB02">FB02 (Wirtschaftswissenschaften)</option>
                                 <option value="FB03">FB03 (Gesellschaftswissenschaften und Philosophie)</option>
@@ -68,7 +71,7 @@ const UserEdit = (props) => {
                         </tr>
                         <tr>
                             <td align="left">Email</td>
-                            <td align="right"><input type="email" name="email" onChange={handleChange} defaultValue={props.email} /></td>
+                            <td align="right"><input type="email" name="email" onChange={handleChange} value={formData.email} /></td>
                         </tr>
                         <tr>
                             <td align="left">Typ</td>
@@ -81,7 +84,7 @@ const UserEdit = (props) => {
                         </tr>
                         <tr>
                             <td align="left">Zug. Buddy</td>
-                            <td align="right"><input type="text" name="buddy" disabled defaultValue={props.buddy} /></td>
+                            <td align="right"><input type="text" name="buddy" disabled value={formData.buddy} /></td>
                         </tr>
                     </tbody>
                 </table>
