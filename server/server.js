@@ -1,3 +1,4 @@
+/* imports */
 const express       = require('express');
 const cors          = require('cors');
 const MongoClient   = require('mongodb').MongoClient;
@@ -5,23 +6,60 @@ const cookieParser  = require('cookie-parser');
 const bodyParser    = require('body-parser');
 const fs 	    = require('fs');
 const https	    = require('https');
+const nodemailer    = require('nodemailer');
+require('dotenv').config();
 
-const mongoUrl 	= 'mongodb://localhost:27017';
-const port 	= 8081;
-/* TODO put this in .env file with a sane password before deploying
- * oh man, I hope I won't forget this...
- */
-const adminPass = Buffer.from('1234').toString('base64'); /* updating and deleting */
-const userPass  = Buffer.from('1234').toString('base64'); /* registering */
+/* constants and globals */
+const mongoUrl  = process.env.MONGOURL || 'mongodb://localhost:27017';
+const port 	= process.env.PORT || 8081;
+const useHttps  = process.env.HTTPS == 'true';
+const mailFrom  = process.env.FROMMAIL;
+const mailPass  = process.env.FROMMAILPASS;
+const adminPass = Buffer.from(process.env.ADMINPASS).toString('base64'); /* updating and deleting */
+const userPass  = Buffer.from(process.env.USERPASS).toString('base64'); /* registering */
 
-const app = express();
+const registerMail =
+`Registrierung erfolgreich. Sobald ein passender Buddy gefunden wurde, erhalten
+Sie eine weitere Mitteilung mit einer Mailadresse, um Kontakt aufzunehmen. Natuerlich
+koennen Sie sich auch ueber andere Wege austauschen, wenn dazu die Moeglichkeit besteht :)
+
+Mit freundlichen Gruessen,
+die Stifti-Gruppe Marburg`
+
+console.log('Using mailFrom=%s', mailFrom);
+const mailTransporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: mailFrom,
+        pass: mailPass
+    }
+});
+
 var db;
+const app = express();
 
+/* functions */
+const sendMail = (to, subject, text) => {
+    mailTransporter.sendMail({
+        from: mailFrom,
+        to, subject, text
+    }, (err, info) => {
+        if (err) {
+            console.log('Failed to send mail to %s: %s', to, err);
+            return;
+        }
+
+        console.log('Mail sent to %s: %s', to, info.response);
+    });
+}
+
+/* middlewares */
 app.use(cookieParser());
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
+/* routes */
 app.get('/', (req, res) => {
     res.send('Root sweet root');
 });;
@@ -116,6 +154,8 @@ app.post('/post/user', async (req, res) => {
                     return;
                 }
 
+                /* send confirmation mail */
+                sendMail(user.email, 'Registrierung', registerMail);
                 res.send('Success: User inserted.');
             });
         } else {
@@ -132,13 +172,23 @@ MongoClient.connect(mongoUrl, (err, client) => {
     db = client.db('buddyAssigner');
     console.log('Connected to database at ', mongoUrl);
 
-    const options = {
-	cert: fs.readFileSync('/etc/letsencrypt/live/bengel.xyz/fullchain.pem'),
-	key: fs.readFileSync('/etc/letsencrypt/live/bengel.xyz/privkey.pem'),
+    console.log('Starting server...');
+    if (useHttps) {
+        const options = {
+            cert: fs.readFileSync('/etc/letsencrypt/live/bengel.xyz/fullchain.pem'),
+            key: fs.readFileSync('/etc/letsencrypt/live/bengel.xyz/privkey.pem'),
+        }
+        const server = https.createServer(options, app).listen(port, () => {
+            const shost = server.address().address;
+            const sport = server.address().port;
+            console.log('Server listening at https://%s:%s', shost, sport);
+        });
+    } else {
+        const server = app.listen(port, function() {
+            const shost = server.address().address;
+            const sport = server.address().port;
+            console.log('Server listening at http://%s:%s', shost, sport);
+        });
     }
-
-    https.createServer(options, app).listen(port, () => {
-	console.log('Server starting in port ' + port);
-    });
 });
 
