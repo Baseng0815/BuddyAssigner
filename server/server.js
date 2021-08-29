@@ -7,6 +7,7 @@ const bodyParser    = require('body-parser');
 const fs 	    = require('fs');
 const https	    = require('https');
 const nodemailer    = require('nodemailer');
+const util          = require('util');
 require('dotenv').config();
 
 /* constants and globals */
@@ -22,6 +23,20 @@ const registerMail =
 `Registrierung erfolgreich. Sobald ein passender Buddy gefunden wurde, erhalten
 Sie eine weitere Mitteilung mit einer Mailadresse, um Kontakt aufzunehmen. Natuerlich
 koennen Sie sich auch ueber andere Wege austauschen, wenn dazu die Moeglichkeit besteht :)
+
+Mit freundlichen Gruessen,
+die Stifti-Gruppe Marburg`
+
+const bigBuddyAssignedMail =
+`Wir haben Ihnen soeben einen grossen Buddy zugeteilt, mit dem Sie sich austauschen koennen.
+Er heisst %s und ist unter '%s' erreichbar.
+
+Mit freundlichen Gruessen,
+die Stifti-Gruppe Marburg`
+
+const smallBuddyAssignedMail =
+`Wir haben Ihnen soeben einen kleinen Buddy zugeteilt, mit dem Sie sich austauschen koennen.
+Er heisst %s und ist unter '%s' erreichbar.
 
 Mit freundlichen Gruessen,
 die Stifti-Gruppe Marburg`
@@ -51,6 +66,85 @@ const sendMail = (to, subject, text) => {
 
         console.log('Mail sent to %s: %s', to, info.response);
     });
+}
+
+/* try to find a matching buddy */
+const tryAssignBuddy = async (user) => {
+    /* we always assign one big buddy to one or more small buddys */
+    /* buddys need to be of the same faculty */
+    let bigBuddy, smallBuddys = [];
+    const users = db.collection('users');
+
+    if (user.type == 'small') {
+        /* user already has big buddy => return */
+        if (user.buddys.length > 0) {
+            return;
+        }
+        /* find big buddy with free capacity */
+        smallBuddys.push(user);
+        const bigBuddyArr = await users.find({ type: 'big', faculty: user.faculty }).toArray();
+        for (bigBuddy of bigBuddyArr) {
+            if (bigBuddy.buddys.length < bigBuddy.count) {
+                break;
+            }
+        }
+    } else if (user.type == 'big') {
+        let free = user.count - user.buddys.length;
+        /* no capacity left => return */
+        if (free == 0) {
+            return;
+        }
+
+        /* find small buddys with free capacity */
+        bigBuddy = user;
+        const smallBuddyArr = await users.find({ type: 'small', faculty: user.faculty }).toArray();
+        for (let smallBuddy of smallBuddyArr) {
+            if (free <= 0) {
+                break;
+            }
+
+            if (smallBuddy.buddys.length == 0) {
+                smallBuddys.push(smallBuddy);
+                free--;
+            }
+        }
+    }
+
+    if (!(bigBuddy && smallBuddys.length > 0)) {
+        /* no matches found */
+        return;
+    }
+
+    for (let smallBuddy of smallBuddys) {
+        bigBuddy.buddys.push(smallBuddy.email);
+        smallBuddy.buddys = [ bigBuddy.email ];
+
+        /* send mail to big buddy for each small buddy */
+        sendMail(bigBuddy.email, 'Kleiner Buddy zugeteilt',
+            util.format(smallBuddyAssignedMail, smallBuddy.name, smallBuddy.email));
+        /* send mail to small buddy */
+        sendMail(smallBuddy.email, 'Grosser Buddy zugeteilt',
+            util.format(bigBuddyAssignedMail, bigBuddy.name, bigBuddy.email));
+        console.log(smallBuddy);
+
+        /* update small buddy in database */
+        users.updateOne({ email: smallBuddy.email }, { $set: smallBuddy });
+    }
+
+    /* update big buddy in database */
+    users.updateOne({ email: bigBuddy.email }, { $set: bigBuddy });
+
+    console.log(`Assigned ${smallBuddys} (small) to ${bigBuddy.email} (big).`);
+}
+
+/* delete all assigned buddies for a deleted user */
+const deleteAssignedBuddies = async (user) => {
+    const users = db.collection('users');
+
+    for (let buddy of user.buddys) {
+        users.updateOne({ email: buddy }, { $pull: { buddys: user.email } });
+        users.updateOne({ email: user.email }, { $pull: { buddys: buddy } })
+    }
 }
 
 /* middlewares */
@@ -88,6 +182,7 @@ app.delete('/delete/user/:email', async (req, res) => {
 
     const email = req.params.email;
     const users = db.collection('users');
+    const user = await users.findOne({ email });
 
     users.deleteOne({ email }, (err, obj) => {
         if (err) {
@@ -95,10 +190,12 @@ app.delete('/delete/user/:email', async (req, res) => {
             return;
         }
 
-        if (obj.deletedCount > 0)
+        if (obj.deletedCount > 0) {
             res.send('Success: User deleted.');
-        else
+            deleteAssignedBuddies(user);
+        } else {
             res.status(400).send('Error: This user does not exist.');
+        }
     });
 });
 
@@ -107,15 +204,16 @@ app.post('/post/user', async (req, res) => {
     const name      = req.body.name;
     const faculty   = req.body.faculty;
     const email     = req.body.email;
-    const type      = req.body.type;
-    const count     = req.body.count;
+    const type      = req.body.type
+    const count     = req.body.count
+    const buddys    = req.body.buddy || [];
 
     if (!email) {
         res.status(400).send('Error: No email specified.');
         return;
     }
 
-    const user = { name, faculty, email, type, count };
+    const user = { name, faculty, email, type, count, buddys };
 
     const users = db.collection('users');
     const found = await users.findOne({ email });
@@ -128,7 +226,9 @@ app.post('/post/user', async (req, res) => {
             return;
         }
 
-        users.updateOne({ email }, { $set: user }, (err, _) => {
+        /* TODO assign here */
+
+        users.updateOne({ email }, { $set: user }, (err, a) => {
             if (err) {
                 console.log(err);
                 res.status(400).send('Error: Something went wrong when updating user.');
@@ -136,6 +236,8 @@ app.post('/post/user', async (req, res) => {
             }
 
             res.send('Success: User updated.');
+            console.log(user);
+            tryAssignBuddy(user);
         });
     } else {
         /* user doesn't exist => create new */
@@ -147,7 +249,9 @@ app.post('/post/user', async (req, res) => {
         }
 
         if (name && faculty && type && count) {
-            users.insertOne(user, (err, _) => {
+            /* TODO assign here */
+            user.buddys = [];
+            users.insertOne(user, async (err, _) => {
                 if (err) {
                     console.log(err);
                     res.status(400).send('Error: Something went wrong when inserting user.');
@@ -156,7 +260,8 @@ app.post('/post/user', async (req, res) => {
 
                 /* send confirmation mail */
                 sendMail(user.email, 'Registrierung', registerMail);
-                res.send('Success: User inserted.');
+                res.send('Success: User created.');
+                tryAssignBuddy(user);
             });
         } else {
             res.status(400).send('Error: Missing fields when trying to create user.');

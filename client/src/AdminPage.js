@@ -9,9 +9,10 @@ const AdminPage = (props) => {
     const [miscData, updateMiscData]            = useState({ editing: {}});
 
     /* in case we are updating the table while editing */
-    React.useEffect(() => {
+    useEffect(() => {
         for (let user of userData.users) {
             if (user.email == miscData.editing.email) {
+                console.log(user);
                 updateMiscData({
                     editing: user
                 });
@@ -68,7 +69,8 @@ const AdminPage = (props) => {
                 faculty:    user.faculty,
                 email:      user.email,
                 type:       user.type,
-                count:      user.count
+                count:      user.count,
+                buddys:     user.buddys
             })
         }).then(async (response) => {
             if (response.ok) {
@@ -119,6 +121,8 @@ const AdminPage = (props) => {
             }
         }
     }
+
+    console.log(miscData.editing);
 
     return (
         <div className="admin-page">

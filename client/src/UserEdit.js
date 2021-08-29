@@ -8,25 +8,26 @@ const UserEdit = (props) => {
         email: props.email || '',
         type: props.type || 'small',
         count: props.count || 1,
-        buddy: props.buddy || ''
+        buddys: props.buddys || []
     };
 
-    const [formData, updateFormData] = useState({});
+    const [formData, updateFormData] = useState(initialFormData);
     useEffect(() => {
         updateFormData(initialFormData);
     }, [props]);
 
     const handleChange = (e) => {
+        console.log(e);
         if (e.target.name == 'type' && e.target.value == 'small') {
             updateFormData({
                 ...formData,
                 count: 1,
-                [e.target.name]: e.target.value.trim()
+                [e.target.name]: e.target.value
             });
         } else {
             updateFormData({
                 ...formData,
-                [e.target.name]: e.target.value.trim()
+                [e.target.name]: e.target.value
             });
         }
     }
@@ -81,10 +82,6 @@ const UserEdit = (props) => {
                         <tr>
                             <td align="left">Anzahl</td>
                             <td><input type="number" min="1" max="69" name="count" disabled={formData.type == 'small'} onChange={handleChange} value={formData.count} /></td>
-                        </tr>
-                        <tr>
-                            <td align="left">Zug. Buddy</td>
-                            <td align="right"><input type="text" name="buddy" disabled value={formData.buddy} /></td>
                         </tr>
                     </tbody>
                 </table>

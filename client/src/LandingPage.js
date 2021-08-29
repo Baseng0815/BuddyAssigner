@@ -27,7 +27,8 @@ const LandingPage = (props) => {
                 faculty:    user.faculty,
                 email:      user.email,
                 type:       user.type,
-                count:      user.count
+                count:      user.count,
+                buddys:     []
             })
         }).then(async (response) => {
             if (response.ok) {

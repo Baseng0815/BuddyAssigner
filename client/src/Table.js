@@ -25,7 +25,11 @@ const Table = (props) => {
                         <td>{user.email}</td>
                         <td>{user.type}</td>
                         <td>{user.count}</td>
-                        <td>{user.buddy}</td>
+                        <td>
+                            {user.buddys.map(buddy =>
+                                <div>{buddy}<br></br></div>
+                            )}
+                        </td>
                     </tr>)}
             </tbody>
         </table>
