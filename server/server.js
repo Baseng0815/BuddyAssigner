@@ -54,7 +54,7 @@ var db;
 const app = express();
 
 /* functions */
-const sendMail = (to, subject, text) => {
+const sendMail = async (to, subject, text) => {
     mailTransporter.sendMail({
         from: mailFrom,
         to, subject, text
@@ -191,8 +191,8 @@ app.delete('/delete/user/:email', async (req, res) => {
         }
 
         if (obj.deletedCount > 0) {
-            res.send('Success: User deleted.');
             deleteAssignedBuddies(user);
+            res.send('Success: User deleted.');
         } else {
             res.status(400).send('Error: This user does not exist.');
         }
@@ -206,7 +206,7 @@ app.post('/post/user', async (req, res) => {
     const email     = req.body.email;
     const type      = req.body.type
     const count     = req.body.count
-    const buddys    = req.body.buddy || [];
+    const buddys    = req.body.buddy;
 
     if (!email) {
         res.status(400).send('Error: No email specified.');
@@ -226,8 +226,6 @@ app.post('/post/user', async (req, res) => {
             return;
         }
 
-        /* TODO assign here */
-
         users.updateOne({ email }, { $set: user }, (err, a) => {
             if (err) {
                 console.log(err);
@@ -235,9 +233,9 @@ app.post('/post/user', async (req, res) => {
                 return;
             }
 
+            tryAssignBuddy(user);
             res.send('Success: User updated.');
             console.log(user);
-            tryAssignBuddy(user);
         });
     } else {
         /* user doesn't exist => create new */
@@ -249,7 +247,6 @@ app.post('/post/user', async (req, res) => {
         }
 
         if (name && faculty && type && count) {
-            /* TODO assign here */
             user.buddys = [];
             users.insertOne(user, async (err, _) => {
                 if (err) {
@@ -260,8 +257,8 @@ app.post('/post/user', async (req, res) => {
 
                 /* send confirmation mail */
                 sendMail(user.email, 'Registrierung', registerMail);
-                res.send('Success: User created.');
                 tryAssignBuddy(user);
+                res.send('Success: User created.');
             });
         } else {
             res.status(400).send('Error: Missing fields when trying to create user.');
