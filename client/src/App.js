@@ -10,6 +10,7 @@ import './App.css';
 
 import LandingPage from './LandingPage';
 import AdminPage from './AdminPage';
+import DSE from './dse';
 
 const App = (props) => {
     return (
@@ -18,6 +19,9 @@ const App = (props) => {
                 <Switch>
                     <Route path="/admin">
                         <AdminPage />
+                    </Route>
+                    <Route path="/datenschutz">
+                        <DSE />
                     </Route>
                     <Route path="/">
                         <LandingPage />

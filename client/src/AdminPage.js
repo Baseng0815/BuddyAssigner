@@ -30,7 +30,7 @@ const AdminPage = (props) => {
             }
         }).then(async (response) => {
             if (!response.ok) {
-                const error = await response.error();
+                const error = await response.text();
                 alert(error);
                 return;
             }
