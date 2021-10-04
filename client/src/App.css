@@ -1,6 +1,7 @@
 html {
     max-width: 1440px;
     margin: 0 auto;
+    font-size: 1.3rem;
 }
 
 .admin-page {
@@ -33,4 +34,9 @@ select {
 
 form {
     margin-bottom: 10px;
+}
+
+input, select {
+    border-radius: 4px;
+    padding: 3px;
 }
