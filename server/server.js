@@ -2,61 +2,28 @@
 const express       = require('express');
 const cors          = require('cors');
 const MongoClient   = require('mongodb').MongoClient;
-const cookieParser  = require('cookie-parser');
-const bodyParser    = require('body-parser');
 const fs 	    = require('fs');
 const https	    = require('https');
 const nodemailer    = require('nodemailer');
 const util          = require('util');
-require('dotenv').config();
 
-/* constants and globals */
-const mongoUrl  = process.env.MONGOURL || 'mongodb://localhost:27017';
-const port 	= process.env.PORT || 8081;
-const useHttps  = process.env.HTTPS == 'true';
-const mailFrom  = process.env.FROMMAIL;
-const mailPass  = process.env.FROMMAILPASS;
-const adminPass = Buffer.from(process.env.ADMINPASS).toString('base64'); /* updating and deleting */
-const userPass  = Buffer.from(process.env.USERPASS).toString('base64'); /* registering */
+const {
+    conf,
+    registerMail,
+    bigBuddyAssignedMail,
+    smallBuddyAssignedMail } = require('./config');
 
-const registerMail =
-`Registrierung erfolgreich. Sobald ein passender Buddy gefunden wurde, erhalten
-Sie eine weitere Mitteilung mit einer Mailadresse, um Kontakt aufzunehmen. Natuerlich
-koennen Sie sich auch ueber andere Wege austauschen, wenn dazu die Moeglichkeit besteht :)
-
-Mit freundlichen Gruessen,
-die Stifti-Gruppe Marburg`
-
-const bigBuddyAssignedMail =
-`Wir haben Ihnen soeben einen grossen Buddy zugeteilt, mit dem Sie sich austauschen koennen.
-Er heisst %s und ist unter '%s' erreichbar.
-
-Mit freundlichen Gruessen,
-die Stifti-Gruppe Marburg`
-
-const smallBuddyAssignedMail =
-`Wir haben Ihnen soeben einen kleinen Buddy zugeteilt, mit dem Sie sich austauschen koennen.
-Er heisst %s und ist unter '%s' erreichbar.
-
-Mit freundlichen Gruessen,
-die Stifti-Gruppe Marburg`
-
-console.log('Using mailFrom=%s', mailFrom);
 const mailTransporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: mailFrom,
-        pass: mailPass
+        user: conf.mailFrom,
+        pass: conf.mailPass
     }
 });
 
-var db;
-const app = express();
-
-/* functions */
-const sendMail = async (to, subject, text) => {
+async function sendMail(to, subject, text) {
     mailTransporter.sendMail({
-        from: mailFrom,
+        from: conf.mailFrom,
         to, subject, text
     }, (err, info) => {
         if (err) {
@@ -67,6 +34,9 @@ const sendMail = async (to, subject, text) => {
         console.log('Mail sent to %s: %s', to, info.response);
     });
 }
+
+var db;
+const app = express();
 
 /* try to find a matching buddy */
 const tryAssignBuddy = async (user) => {
@@ -138,7 +108,7 @@ const tryAssignBuddy = async (user) => {
 }
 
 /* delete all assigned buddies for a deleted user */
-const deleteAssignedBuddies = async (user) => {
+async function deleteAssignedBuddies(user) {
     const users = db.collection('users');
 
     for (let buddy of user.buddys) {
@@ -148,21 +118,31 @@ const deleteAssignedBuddies = async (user) => {
 }
 
 /* middlewares */
-app.use(cookieParser());
 app.use(cors());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 /* routes */
 app.get('/', (req, res) => {
     res.send('Root sweet root');
-});;
+});
 
-/* get users(s) */
-app.get('/get/users', async (req, res) => {
+/* ---------- get users(s) ---------- */
+function validateGetUsers(req, res) {
     const passInput = req.headers.authorization.split(' ')[1];
-    if (passInput != adminPass) {
-        res.status(400).send('Error: Wrong password.');
+    if (passInput != conf.adminPass) {
+        res.json({
+            ok: false,
+            message: 'Could not get users due to missing or invalid admin password.'
+        });
+        return false;
+    }
+
+    return true;
+}
+
+app.get('/get/users', async (req, res) => {
+    if (!validateGetUsers(req, res)) {
         return;
     }
 
@@ -171,12 +151,32 @@ app.get('/get/users', async (req, res) => {
 
     res.json({ users: userList});
 });
+/* ---------- get users(s) ---------- */
 
-/* delete user */
-app.delete('/delete/user/:email', async (req, res) => {
+/* ---------- delete user ----------- */
+function validateDeleteUser(req, res) {
     const passInput = req.headers.authorization.split(' ')[1];
-    if (passInput != adminPass) {
-        res.status(400).send('Error: Wrong password.');
+    if (passInput != conf.adminPass) {
+        res.json({
+            ok: false,
+            message: 'Could not delete user due to missing or invalid admin password.'
+        });
+        return false;
+    }
+
+    if (!req.params.email) {
+        res.json({
+            ok: false,
+            message: 'Could not delete user due to missing email field.'
+        });
+        return false;
+    }
+
+    return true;
+}
+
+app.delete('/delete/user/:email', async (req, res) => {
+    if (!validateDeleteUser(req, res)) {
         return;
     }
 
@@ -186,107 +186,151 @@ app.delete('/delete/user/:email', async (req, res) => {
 
     users.deleteOne({ email }, (err, obj) => {
         if (err) {
-            res.status(400).send('Error: Something went wrong.');
+            res.json({
+                ok: false,
+                message: 'Database error when trying to delete user: ' + err
+            });
             return;
         }
 
         if (obj.deletedCount > 0) {
             deleteAssignedBuddies(user);
-            res.send('Success: User deleted.');
+            res.json({
+                ok: true,
+                message: 'User was successfully deleted.'
+            });
         } else {
-            res.status(400).send('Error: This user does not exist.');
+            res.json({
+                ok: false,
+                message: 'Cannot delete a nonexistent user.'
+            });
         }
     });
 });
+/* ---------- delete user ----------- */
 
-/* create and update users */
+
+/* ---------- post user ------------ */
+function validatePostUser(req, res) {
+    const email = req.body.email;
+    if (!email) {
+        res.json({
+            ok: false,
+            message: 'Could not post user because email is missing.'
+        });
+        return false;
+    }
+
+    const users = db.collection('users');
+    const alreadyExisting = await users.findOne({ email });
+    if (alreadyExisting) {
+        /* update => admin pass necessary */
+        const passInput = req.headers.authorization.split(' ')[1];
+        if (passInput != conf.adminPass) {
+            res.json({
+                ok: false,
+                message: 'Could not update user because admin pass is missing or invalid.'
+            });
+            return false;
+        }
+    } else {
+        /* create => admin or user pass necessary (and a full user struct) */
+        const passInput = req.headers.authorization.split(' ')[1];
+        if (passInput != conf.adminPass && passInput != conf.userPass) {
+            res.json({
+                ok: false,
+                message: 'Could not create user because admin and user pass is missing or invalid.'
+            });
+            return false;
+        }
+
+        if (!req.body.name || !req.body.faculty ||
+            !req.body.typ || !req.body.count) {
+            res.json({
+                ok: false,
+                message: 'Could not create user because some data is missing.'
+            });
+            return false;
+        }
+    }
+
+    return true;
+}
+
 app.post('/post/user', async (req, res) => {
+    if (!validatePostUser(req, res)) {
+        return;
+    }
+
+    const email     = req.body.email;
     const name      = req.body.name;
     const faculty   = req.body.faculty;
-    const email     = req.body.email;
     const type      = req.body.type
     const count     = req.body.count
     const buddys    = req.body.buddy;
 
-    if (!email) {
-        res.status(400).send('Error: No email specified.');
-        return;
-    }
-
     const user = { name, faculty, email, type, count, buddys };
 
     const users = db.collection('users');
-    const found = await users.findOne({ email });
-    if (found) {
-        const passInput = req.headers.authorization.split(' ')[1];
-
+    const alreadyExisting = await users.findOne({ email });
+    if (alreadyExisting) {
         /* user exists => update */
-        if (passInput != adminPass) {
-            res.status(400).send('Error: Wrong password.');
-            return;
-        }
-
-        users.updateOne({ email }, { $set: user }, (err, a) => {
+        users.updateOne({ email }, { $set: user }, (err, _) => {
             if (err) {
-                console.log(err);
-                res.status(400).send('Error: Something went wrong when updating user.');
+                res.json({
+                    ok: false,
+                    message: 'Database error when trying to update user: ' + err
+                });
                 return;
             }
 
             tryAssignBuddy(user);
-            res.send('Success: User updated.');
-            console.log(user);
+            res.json({
+                ok: true,
+                message: 'User successfully updated.'
+            });
         });
     } else {
         /* user doesn't exist => create new */
-        const passInput = req.headers.authorization.split(' ')[1];
+        user.buddys = [];
+        users.insertOne(user, async (err, _) => {
+            if (err) {
+                res.json({
+                    ok: false,
+                    message: 'Database error when trying to create user: ' + err
+                });
+                return;
+            }
 
-        if (passInput != adminPass && passInput != userPass) {
-            res.status(400).send('Error: Wrong password.');
-            return;
-        }
-
-        if (name && faculty && type && count) {
-            user.buddys = [];
-            users.insertOne(user, async (err, _) => {
-                if (err) {
-                    console.log(err);
-                    res.status(400).send('Error: Something went wrong when inserting user.');
-                    return;
-                }
-
-                /* send confirmation mail */
-                sendMail(user.email, 'Registrierung', registerMail);
-                tryAssignBuddy(user);
-                res.send('Success: User created.');
-            });
-        } else {
-            res.status(400).send('Error: Missing fields when trying to create user.');
-        }
+            /* send confirmation mail */
+            sendMail(user.email, 'Registrierung', registerMail);
+            tryAssignBuddy(user);
+            res.send('Success: User created.');
+        });
     }
 });
 
 /* connect to database and start server once connected */
-MongoClient.connect(mongoUrl, (err, client) => {
+MongoClient.connect(conf.mongoUrl, (err, client) => {
     if (err)
         throw err;
 
     db = client.db('buddyAssigner');
-    console.log('Connected to database at ', mongoUrl);
+    console.log('Connected to database at ', conf.mongoUrl);
 
     console.log('Starting server...');
-    if (useHttps) {
+    if (conf.useHttps) {
         const options = {
-            cert: fs.readFileSync('/etc/letsencrypt/live/bengel.xyz/fullchain.pem'),
-            key: fs.readFileSync('/etc/letsencrypt/live/bengel.xyz/privkey.pem'),
+            cert: conf.httpsCert,
+            key: conf.httpsKey
         }
-        const server = https.createServer(options, app).listen(port, () => {
+        const server = https.createServer(options, app).listen(conf.port, () => {
             const shost = server.address().address;
             const sport = server.address().port;
             console.log('Server listening at https://%s:%s', shost, sport);
         });
     } else {
-        const server = app.listen(port, function() {
+        const server = app.listen(conf.port, () => {
             const shost = server.address().address;
             const sport = server.address().port;
             console.log('Server listening at http://%s:%s', shost, sport);
