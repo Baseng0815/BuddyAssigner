@@ -37,5 +37,4 @@ in `.env`. *Be careful to not accidentally push this file or other will have
 access to your passwords.*
 
 Parameters need to be checked thoroughly to avoid crashes and invalid database
-writes. This is a matter that will become only more obvious once the server is
-deployed for real and receives more than a few test requests.
+writes.
